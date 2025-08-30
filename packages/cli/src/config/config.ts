@@ -57,6 +57,7 @@ export interface CliArgs {
   sandboxImage: string | undefined;
   debug: boolean | undefined;
   prompt: string | undefined;
+  image: string[] | undefined;
   promptInteractive: string | undefined;
   allFiles: boolean | undefined;
   showMemoryUsage: boolean | undefined;
@@ -98,6 +99,11 @@ export async function parseArguments(settings: Settings): Promise<CliArgs> {
           alias: 'p',
           type: 'string',
           description: 'Prompt. Appended to input on stdin (if any).',
+        })
+        .option('image', {
+          type: 'array',
+          string: true,
+          description: 'Image path. Can be specified multiple times.',
         })
         .option('prompt-interactive', {
           alias: 'i',

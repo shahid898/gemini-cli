@@ -255,6 +255,7 @@ export class GeminiChat {
           );
         }
 
+        console.log('[GeminiChat] Sending request with contents:', JSON.stringify(requestContents, null, 2));
         return this.contentGenerator.generateContent(
           {
             model: modelToUse,
@@ -449,6 +450,7 @@ export class GeminiChat {
         );
       }
 
+      console.log('[GeminiChat] Sending request with contents:', JSON.stringify(requestContents, null, 2));
       return this.contentGenerator.generateContentStream(
         {
           model: modelToUse,
@@ -550,7 +552,7 @@ export class GeminiChat {
       if (cyclicSchemaTools.length > 0) {
         const extraDetails =
           `\n\nThis error was probably caused by cyclic schema references in one of the following tools, try disabling them with excludeTools:\n\n - ` +
-          cyclicSchemaTools.join(`\n - `) +
+          cyclicSchemaTools.join(`\n - `) + 
           `\n`;
         error.message += extraDetails;
       }

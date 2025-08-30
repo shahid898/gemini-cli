@@ -15,14 +15,50 @@ import {
   FatalTurnLimitedError,
 } from '@google/gemini-cli-core';
 import type { Content, Part } from '@google/genai';
+import * as fs from 'fs';
+import * as path from 'path';
 
 import { ConsolePatcher } from './ui/utils/ConsolePatcher.js';
 import { handleAtCommand } from './ui/hooks/atCommandProcessor.js';
+
+// Function to convert a file to a base64 encoded string
+function fileToGenerativePart(filePath: string): Part {
+  const mimeType = getMimeType(filePath);
+  if (!mimeType) {
+    throw new FatalInputError(`Unsupported image format: ${filePath}`);
+  }
+  return {
+    inlineData: {
+      data: fs.readFileSync(filePath).toString('base64'),
+      mimeType,
+    },
+  };
+}
+
+function getMimeType(filePath: string): string | undefined {
+  const extension = path.extname(filePath).toLowerCase();
+  switch (extension) {
+    case '.png':
+      return 'image/png';
+    case '.jpg':
+    case '.jpeg':
+      return 'image/jpeg';
+    case '.webp':
+      return 'image/webp';
+    case '.heic':
+      return 'image/heic';
+    case '.heif':
+      return 'image/heif';
+    default:
+      return undefined;
+  }
+}
 
 export async function runNonInteractive(
   config: Config,
   input: string,
   prompt_id: string,
+  imagePaths?: string[],
 ): Promise<void> {
   const consolePatcher = new ConsolePatcher({
     stderr: true,
@@ -60,8 +96,11 @@ export async function runNonInteractive(
       );
     }
 
+    const textPart: Part = { text: processedQuery as string };
+    const imageParts: Part[] = (imagePaths || []).map(fileToGenerativePart);
+
     let currentMessages: Content[] = [
-      { role: 'user', parts: processedQuery as Part[] },
+      { role: 'user', parts: [textPart, ...imageParts] },
     ];
 
     let turnCount = 0;

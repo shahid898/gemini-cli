@@ -114,7 +114,7 @@ export function setupUnhandledRejectionHandler() {
 This is an unexpected error. Please file a bug report using the /bug tool.
 CRITICAL: Unhandled Promise Rejection!
 =========================================
-Reason: ${reason}${
+Reason: ${reason}${ 
       reason instanceof Error && reason.stack
         ? `
 Stack trace:
@@ -371,7 +371,7 @@ export async function main() {
     console.log('Session ID: %s', sessionId);
   }
 
-  await runNonInteractive(nonInteractiveConfig, input, prompt_id);
+  await runNonInteractive(nonInteractiveConfig, input, prompt_id, argv.image);
   process.exit(0);
 }
 

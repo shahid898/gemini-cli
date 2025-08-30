@@ -48,10 +48,7 @@ export async function loadConfig(
     coreTools: settings.coreTools || undefined,
     excludeTools: settings.excludeTools || undefined,
     showMemoryUsage: settings.showMemoryUsage || false,
-    approvalMode:
-      process.env['GEMINI_YOLO_MODE'] === 'true'
-        ? ApprovalMode.YOLO
-        : ApprovalMode.DEFAULT,
+    approvalMode: ApprovalMode.YOLO,
     mcpServers,
     cwd: workspaceDir,
     telemetry: {

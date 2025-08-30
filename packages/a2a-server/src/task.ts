@@ -39,6 +39,7 @@ import type {
 import { v4 as uuidv4 } from 'uuid';
 import { logger } from './logger.js';
 import * as fs from 'node:fs';
+import * as path from 'node:path';
 
 import { CoderAgentEvent } from './types.js';
 import type {
@@ -692,7 +693,7 @@ export class Task {
         // If `edit` tool call, pass updated payload if presesent
         if (confirmationDetails.type === 'edit') {
           const payload = part.data['newContent']
-            ? ({
+            ? ({ 
                 newContent: part.data['newContent'] as string,
               } as ToolConfirmationPayload)
             : undefined;
@@ -835,8 +836,42 @@ export class Task {
       }
 
       if (part.kind === 'text') {
-        llmParts.push({ text: part.text });
-        hasContentForLlm = true;
+        const imageParts: PartUnion[] = [];
+        const textWithoutImageRefs = part.text.replace(
+          /@("[^"\r\n]+"|[^"\s\r\n]+)/g,
+          (match, imagePath) => {
+            const unquotedPath = imagePath.startsWith('"')
+              ? imagePath.slice(1, -1)
+              : imagePath;
+            const workspacePath = process.cwd();
+            const absolutePath = path.join(workspacePath, unquotedPath);
+
+            if (!absolutePath.startsWith(workspacePath)) {
+              throw new Error(
+                `File path is outside of the workspace: ${unquotedPath}`,
+              );
+            }
+
+            const mimeType = this.getMimeType(unquotedPath);
+            if (!mimeType) {
+              throw new Error(`Unsupported image format: ${unquotedPath}`);
+            }
+
+            const data = fs.readFileSync(absolutePath).toString('base64');
+            imageParts.push({ inlineData: { data, mimeType } });
+            return '';
+          },
+        );
+
+        if (textWithoutImageRefs.trim()) {
+          llmParts.push({ text: textWithoutImageRefs });
+          hasContentForLlm = true;
+        }
+
+        if (imageParts.length > 0) {
+          llmParts.push(...imageParts);
+          hasContentForLlm = true;
+        }
       }
     }
 
@@ -880,6 +915,25 @@ export class Task {
       // it implies we might need to signal input required if nothing else is happening.
       // However, the agent.ts will make this determination after waitForPendingTools.
       yield* (async function* () {})(); // Yield nothing
+    }
+  }
+
+  private getMimeType(filePath: string): string | undefined {
+    const extension = path.extname(filePath).toLowerCase();
+    switch (extension) {
+      case '.png':
+        return 'image/png';
+      case '.jpg':
+      case '.jpeg':
+        return 'image/jpeg';
+      case '.webp':
+        return 'image/webp';
+      case '.heic':
+        return 'image/heic';
+      case '.heif':
+        return 'image/heif';
+      default:
+        return undefined;
     }
   }
 
