@@ -838,18 +838,27 @@ export class Task {
       if (part.kind === 'text') {
         const imageParts: PartUnion[] = [];
         const textWithoutImageRefs = part.text.replace(
-          /@("[^"\r\n]+"|[^"\s\r\n]+)/g,
-          (match, imagePath) => {
-            const unquotedPath = imagePath.startsWith('"')
-              ? imagePath.slice(1, -1)
-              : imagePath;
+          /'([^']+\.(?:png|jpg|jpeg|webp|heic|heif))'|"([^"]+\.(?:png|jpg|jpeg|webp|heic|heif))"|(\S+\.(?:png|jpg|jpeg|webp|heic|heif))/g,
+          (match, g1, g2, g3) => {
+            const imagePath = g1 || g2 || g3;
+            const unquotedPath = imagePath;
             const workspacePath = process.cwd();
-            const absolutePath = path.join(workspacePath, unquotedPath);
+            const absolutePath = path.resolve(workspacePath, unquotedPath);
+
+            logger.info(
+              `[Task] Attempting to read image from path: ${unquotedPath}`,
+            );
+            logger.info(`[Task] Workspace path: ${workspacePath}`);
+            logger.info(`[Task] Resolved absolute image path: ${absolutePath}`);
 
             if (!absolutePath.startsWith(workspacePath)) {
               throw new Error(
-                `File path is outside of the workspace: ${unquotedPath}`,
+                `File path is outside of the workspace: ${unquotedPath}. Workspace is: ${workspacePath}`,
               );
+            }
+
+            if (!fs.existsSync(absolutePath)) {
+              throw new Error(`Image file not found at: ${absolutePath}`);
             }
 
             const mimeType = this.getMimeType(unquotedPath);
