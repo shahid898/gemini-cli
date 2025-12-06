@@ -123,7 +123,10 @@ class CoderAgentExecutor implements AgentExecutor {
   // Track tasks with an active execution loop.
   private executingTasks = new Set<string>();
 
-  constructor(private taskStore?: TaskStore) {}
+  constructor(
+    private taskStore?: TaskStore,
+    private model?: string,
+  ) {}
 
   private async getConfig(
     agentSettings: AgentSettings,
@@ -132,6 +135,9 @@ class CoderAgentExecutor implements AgentExecutor {
     const workspaceRoot = setTargetDir(agentSettings);
     loadEnvironment(); // Will override any global env with workspace envs
     const settings = loadSettings(workspaceRoot);
+    if (agentSettings.model) {
+      settings.model = agentSettings.model;
+    }
     const extensions = loadExtensions(workspaceRoot);
     return await loadConfig(settings, extensions, taskId);
   }
@@ -180,6 +186,7 @@ class CoderAgentExecutor implements AgentExecutor {
     eventBus?: ExecutionEventBus,
   ): Promise<TaskWrapper> {
     const agentSettings = agentSettingsInput || ({} as AgentSettings);
+    agentSettings.model = agentSettings.model || this.model;
     const config = await this.getConfig(agentSettings, taskId);
     const runtimeTask = await Task.create(taskId, contextId, config, eventBus);
     await runtimeTask.geminiClient.initialize(
@@ -644,9 +651,9 @@ export function updateCoderAgentCardUrl(port: number) {
   coderAgentCard.url = `http://localhost:${port}/`;
 }
 
-export async function main() {
+export async function main(model?: string) {
   try {
-    const expressApp = await createApp();
+    const expressApp = await createApp(model);
     const port = process.env['CODER_AGENT_PORT'] || 0;
 
     const server = expressApp.listen(port, () => {
@@ -674,8 +681,11 @@ export async function main() {
   }
 }
 
-export async function createApp() {
+export async function createApp(model?: string) {
   try {
+    if (model) {
+      logger.info(`[CoreAgent] Using model specified from command line: ${model}`);
+    }
     // loadEnvironment() is called within getConfig now
     const bucketName = process.env['GCS_BUCKET_NAME'];
     let taskStoreForExecutor: TaskStore;
@@ -693,7 +703,7 @@ export async function createApp() {
       taskStoreForHandler = inMemoryTaskStore;
     }
 
-    const agentExecutor = new CoderAgentExecutor(taskStoreForExecutor);
+    const agentExecutor = new CoderAgentExecutor(taskStoreForExecutor, model);
 
     const requestHandler = new DefaultRequestHandler(
       coderAgentCard,
