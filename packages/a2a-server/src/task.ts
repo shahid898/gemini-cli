@@ -838,9 +838,16 @@ export class Task {
       if (part.kind === 'text') {
         const imageParts: PartUnion[] = [];
         const textWithoutImageRefs = part.text.replace(
-          /'([^']+\.(?:png|jpg|jpeg|webp|heic|heif))'|"([^"]+\.(?:png|jpg|jpeg|webp|heic|heif))"|(\S+\.(?:png|jpg|jpeg|webp|heic|heif))/g,
+          /'((?!https?:\/\/)[^']+\.(?:png|jpg|jpeg|webp|heic|heif))'|"((?!https?:\/\/)[^"]+\.(?:png|jpg|jpeg|webp|heic|heif))"|((?!https?:\/\/)\S+\.(?:png|jpg|jpeg|webp|heic|heif))/g,
           (match, g1, g2, g3) => {
             const imagePath = g1 || g2 || g3;
+            // --- FIX: Detect and skip ALL URL schemes ---
+            // FIX: Detect URLs using the FULL match string
+            if (match.includes("://")) {
+              logger.info(`[Task] Skipping URL: ${match}`);
+              return match; // keep original text
+            }
+            // The regex now filters out URLs, so we can proceed directly.
             const unquotedPath = imagePath;
             const workspacePath = process.cwd();
             const absolutePath = path.resolve(workspacePath, unquotedPath);
