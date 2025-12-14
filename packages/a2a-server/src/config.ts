@@ -86,7 +86,10 @@ export async function loadConfig(
   // Needed to initialize ToolRegistry, and git checkpointing if enabled
   await config.initialize();
 
-  if (process.env['USE_CCPA']) {
+  if (process.env['GOOGLE_GENAI_USE_VERTEXAI'] === 'true') {
+    logger.info('[Config] Using Vertex AI');
+    await config.refreshAuth(AuthType.USE_VERTEX_AI);
+  } else if (process.env['USE_CCPA']) {
     logger.info('[Config] Using CCPA Auth:');
     try {
       if (adcFilePath) {
@@ -101,12 +104,15 @@ export async function loadConfig(
     logger.info(
       `[Config] GOOGLE_CLOUD_PROJECT: ${process.env['GOOGLE_CLOUD_PROJECT']}`,
     );
-  } else if (process.env['GEMINI_API_KEY']) {
+  } else if (
+    process.env['GEMINI_API_KEY'] ||
+    process.env['GOOGLE_API_KEY']
+  ) {
     logger.info('[Config] Using Gemini API Key');
     await config.refreshAuth(AuthType.USE_GEMINI);
   } else {
     logger.error(
-      `[Config] Unable to set GeneratorConfig. Please provide a GEMINI_API_KEY or set USE_CCPA.`,
+      `[Config] Unable to set GeneratorConfig. Please configure your authentication method. Supported methods are: Vertex AI (via GOOGLE_GENAI_USE_VERTEXAI), Google Account (via USE_CCPA), or an API Key (via GEMINI_API_KEY or GOOGLE_API_KEY).`,
     );
   }
 

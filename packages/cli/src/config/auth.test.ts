@@ -52,16 +52,10 @@ describe('validateAuthMethod', () => {
       expect(validateAuthMethod(AuthType.USE_VERTEX_AI)).toBeNull();
     });
 
-    it('should return null if GOOGLE_API_KEY is set', () => {
-      process.env['GOOGLE_API_KEY'] = 'test-api-key';
-      expect(validateAuthMethod(AuthType.USE_VERTEX_AI)).toBeNull();
-    });
-
     it('should return an error message if no required environment variables are set', () => {
       expect(validateAuthMethod(AuthType.USE_VERTEX_AI)).toBe(
-        'When using Vertex AI, you must specify either:\n' +
+        'When using Vertex AI, you must specify both:\n' +
           '• GOOGLE_CLOUD_PROJECT and GOOGLE_CLOUD_LOCATION environment variables.\n' +
-          '• GOOGLE_API_KEY environment variable (if using express mode).\n' +
           'Update your environment and try again (no reload needed if using .env)!',
       );
     });
