@@ -740,6 +740,7 @@ export async function main() {
       input,
       prompt_id,
       resumedSessionData,
+      imagePaths: argv.image
     });
     // Call cleanup before process.exit, which causes cleanup to not run
     await runExitCleanup();

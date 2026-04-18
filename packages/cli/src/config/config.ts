@@ -80,6 +80,7 @@ export interface CliArgs {
   sandbox: boolean | string | undefined;
   debug: boolean | undefined;
   prompt: string | undefined;
+  image: string[] | undefined;
   promptInteractive: string | undefined;
   worktree?: string;
 
@@ -280,6 +281,11 @@ export async function parseArguments(
           nargs: 1,
           description:
             'Run in non-interactive (headless) mode with the given prompt. Appended to input on stdin (if any).',
+        })
+        .option('image', {
+          type: 'array',
+          string: true,
+          description: 'Image path. Can be specified multiple times.',
         })
         .option('prompt-interactive', {
           alias: 'i',

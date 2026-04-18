@@ -86,7 +86,10 @@ export class CoderAgentExecutor implements AgentExecutor {
   // Track tasks with an active execution loop.
   private executingTasks = new Set<string>();
 
-  constructor(private taskStore?: TaskStore) {}
+  constructor(
+    private taskStore?: TaskStore,
+    private model?: string,
+  ) {}
 
   private async getConfig(
     agentSettings: AgentSettings,
@@ -95,6 +98,9 @@ export class CoderAgentExecutor implements AgentExecutor {
     const workspaceRoot = setTargetDir(agentSettings);
     loadEnvironment(); // Will override any global env with workspace envs
     const settings = loadSettings(workspaceRoot);
+    if (agentSettings.model) {
+      settings.model = agentSettings.model;
+    }
     const extensions = loadExtensions(workspaceRoot);
     return loadConfig(settings, new SimpleExtensionLoader(extensions), taskId);
   }
@@ -145,6 +151,7 @@ export class CoderAgentExecutor implements AgentExecutor {
       kind: CoderAgentEvent.StateAgentSettingsEvent,
       workspacePath: process.cwd(),
     };
+    agentSettings.model = agentSettings.model || this.model;
     const config = await this.getConfig(agentSettings, taskId);
     const runtimeTask = await Task.create(
       taskId,

@@ -877,14 +877,14 @@ describe('createContentGeneratorConfig', () => {
     expect(config.vertexai).toBeUndefined();
   });
 
-  it('should configure for Vertex AI using GOOGLE_API_KEY when set', async () => {
+  it('should not use GOOGLE_API_KEY for Vertex AI', async () => {
     vi.stubEnv('GOOGLE_API_KEY', 'env-google-key');
     const config = await createContentGeneratorConfig(
       mockConfig,
       AuthType.USE_VERTEX_AI,
     );
-    expect(config.apiKey).toBe('env-google-key');
-    expect(config.vertexai).toBe(true);
+    expect(config.apiKey).toBeUndefined();
+    expect(config.vertexai).toBeUndefined();
   });
 
   it('should configure for Vertex AI using GCP project and location when set', async () => {

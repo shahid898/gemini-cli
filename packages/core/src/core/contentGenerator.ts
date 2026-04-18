@@ -99,6 +99,8 @@ export type ContentGeneratorConfig = {
   proxy?: string;
   baseUrl?: string;
   customHeaders?: Record<string, string>;
+  project?: string;
+  location?: string;
 };
 
 const LOCAL_HOSTNAMES = ['localhost', '127.0.0.1', '[::1]'];
@@ -150,30 +152,30 @@ export async function createContentGeneratorConfig(
     return contentGeneratorConfig;
   }
 
+  if (
+    authType === AuthType.USE_VERTEX_AI &&
+    googleCloudProject &&
+    googleCloudLocation
+  ) {
+    contentGeneratorConfig.vertexai = true;
+    contentGeneratorConfig.project = googleCloudProject;
+    contentGeneratorConfig.location = googleCloudLocation;
+    // Explicitly do not set apiKey for Vertex
+    return contentGeneratorConfig;
+  }
+
   if (authType === AuthType.USE_GEMINI && geminiApiKey) {
     contentGeneratorConfig.apiKey = geminiApiKey;
     contentGeneratorConfig.vertexai = false;
 
     return contentGeneratorConfig;
   }
-
-  if (
-    authType === AuthType.USE_VERTEX_AI &&
-    (googleApiKey || (googleCloudProject && googleCloudLocation))
-  ) {
-    contentGeneratorConfig.apiKey = googleApiKey;
-    contentGeneratorConfig.vertexai = true;
-
-    return contentGeneratorConfig;
-  }
-
   if (authType === AuthType.GATEWAY) {
     contentGeneratorConfig.apiKey = apiKey || 'gateway-placeholder-key';
     contentGeneratorConfig.vertexai = false;
 
     return contentGeneratorConfig;
   }
-
   return contentGeneratorConfig;
 }
 
@@ -310,10 +312,13 @@ export async function createContentGenerator(
       if (baseUrl) {
         httpOptions.baseUrl = baseUrl;
       }
-
+      console.log("Vertex project:", config.project);
+      console.log("Vertex location:", config.location);
       const googleGenAI = new GoogleGenAI({
         apiKey: config.apiKey === '' ? undefined : config.apiKey,
         vertexai: config.vertexai ?? config.authType === AuthType.USE_VERTEX_AI,
+        project: config.project,
+        location: config.location,
         httpOptions,
         ...(apiVersionEnv && { apiVersion: apiVersionEnv }),
       });

@@ -35,6 +35,8 @@ import {
 import type { Content, Part } from '@google/genai';
 import readline from 'node:readline';
 import stripAnsi from 'strip-ansi';
+import * as fs from 'fs';
+import * as path from 'path';
 
 import { handleSlashCommand } from './nonInteractiveCliCommands.js';
 import { ConsolePatcher } from './ui/utils/ConsolePatcher.js';
@@ -54,6 +56,39 @@ interface RunNonInteractiveParams {
   input: string;
   prompt_id: string;
   resumedSessionData?: ResumedSessionData;
+}
+
+// Function to convert a file to a base64 encoded string
+function fileToGenerativePart(filePath: string): Part {
+  const mimeType = getMimeType(filePath);
+  if (!mimeType) {
+    throw new FatalInputError(`Unsupported image format: ${filePath}`);
+  }
+  return {
+    inlineData: {
+      data: fs.readFileSync(filePath).toString('base64'),
+      mimeType,
+    },
+  };
+}
+
+function getMimeType(filePath: string): string | undefined {
+  const extension = path.extname(filePath).toLowerCase();
+  switch (extension) {
+    case '.png':
+      return 'image/png';
+    case '.jpg':
+    case '.jpeg':
+      return 'image/jpeg';
+    case '.webp':
+      return 'image/webp';
+    case '.heic':
+      return 'image/heic';
+    case '.heif':
+      return 'image/heif';
+    default:
+      return undefined;
+  }
 }
 
 export async function runNonInteractive(
@@ -271,15 +306,18 @@ export async function runNonInteractive(
           signal: abortController.signal,
           escapePastedAtSymbols: false,
         });
+
         if (error || !processedQuery) {
-          // An error occurred during @include processing (e.g., file not found).
-          // The error message is already logged by handleAtCommand.
           throw new FatalInputError(
             error || 'Exiting due to an error processing the @ command.',
           );
         }
-        // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion
-        query = processedQuery as Part[];
+
+        const baseParts = processedQuery as Part[];
+
+        const imageParts: Part[] = (params.imagePaths || []).map(fileToGenerativePart);
+
+        query = [...baseParts, ...imageParts];
       }
 
       // Emit user message event for streaming JSON

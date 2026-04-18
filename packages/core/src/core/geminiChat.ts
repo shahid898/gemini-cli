@@ -655,7 +655,7 @@ export class GeminiChat {
       lastModelToUse = modelToUse;
       lastConfig = config;
       lastContentsToUse = contentsToUse;
-
+      console.log('[GeminiChat] Sending request with contents:', JSON.stringify(requestContents, null, 2));
       return this.context.config.getContentGenerator().generateContentStream(
         {
           model: modelToUse,
