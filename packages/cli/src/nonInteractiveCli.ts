@@ -56,6 +56,7 @@ interface RunNonInteractiveParams {
   input: string;
   prompt_id: string;
   resumedSessionData?: ResumedSessionData;
+  imagePaths?: string[];
 }
 
 // Function to convert a file to a base64 encoded string
@@ -291,8 +292,11 @@ export async function runNonInteractive(
         // Otherwise, slashCommandResult falls through to the default prompt
         // handling.
         if (slashCommandResult) {
-          // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion
-          query = slashCommandResult as Part[];
+          if (typeof slashCommandResult === 'string') {
+            query = [{ text: slashCommandResult }];
+          } else {
+            query = slashCommandResult;
+          }
         }
       }
 

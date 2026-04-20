@@ -57,6 +57,7 @@ interface RunNonInteractiveParams {
   input: string;
   prompt_id: string;
   resumedSessionData?: ResumedSessionData;
+  imagePaths?: string[];
 }
 
 export async function runNonInteractive({

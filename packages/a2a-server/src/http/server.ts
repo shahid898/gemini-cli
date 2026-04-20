@@ -22,12 +22,12 @@ if (
   isMainModule &&
   process.env['NODE_ENV'] !== 'test'
 ) {
-  process.on('uncaughtException', (error) => {
+  process.on('uncaughtException', (error: Error) => {
     logger.error('Unhandled exception:', error);
     process.exit(1);
   });
 
-  main().catch((error) => {
+  main().catch((error: Error) => {
     logger.error('[CoreAgent] Unhandled error in main:', error);
     process.exit(1);
   });

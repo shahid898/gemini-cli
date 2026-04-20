@@ -53,6 +53,7 @@ import type {
 import { v4 as uuidv4 } from 'uuid';
 import { logger } from '../utils/logger.js';
 import * as fs from 'node:fs/promises';
+import * as fsSync from 'node:fs';
 import * as path from 'node:path';
 import {
   CoderAgentEvent,
@@ -880,19 +881,19 @@ export class Task {
     if (
       part.kind !== 'data' ||
       !part.data ||
+      typeof part.data !== 'object' ||
+      !('callId' in part.data) ||
+      !('outcome' in part.data) ||
       // eslint-disable-next-line no-restricted-syntax
-      typeof part.data['callId'] !== 'string' ||
+      typeof (part.data as { callId: unknown }).callId !== 'string' ||
       // eslint-disable-next-line no-restricted-syntax
-      typeof part.data['outcome'] !== 'string'
+      typeof (part.data as { outcome: unknown }).outcome !== 'string'
     ) {
       return false;
     }
-    if (!part.data['outcome']) {
-      return false;
-    }
 
-    const callId = part.data['callId'];
-    const outcomeString = part.data['outcome'];
+    const callId = (part.data as { callId: string }).callId;
+    const outcomeString = (part.data as { outcome: string }).outcome;
 
     this.toolsAlreadyConfirmed.add(callId);
 
@@ -1125,7 +1126,7 @@ export class Task {
             const imagePath = g1 || g2 || g3;
             // --- FIX: Detect and skip ALL URL schemes ---
             // FIX: Detect URLs using the FULL match string
-            if (match.includes("://")) {
+            if (match.includes('://')) {
               logger.info(`[Task] Skipping URL: ${match}`);
               return match; // keep original text
             }
@@ -1146,7 +1147,7 @@ export class Task {
               );
             }
 
-            if (!fs.existsSync(absolutePath)) {
+            if (!fsSync.existsSync(absolutePath)) {
               throw new Error(`Image file not found at: ${absolutePath}`);
             }
 
@@ -1155,8 +1156,10 @@ export class Task {
               throw new Error(`Unsupported image format: ${unquotedPath}`);
             }
 
-            const data = fs.readFileSync(absolutePath).toString('base64');
-            imageParts.push({ inlineData: { data, mimeType } });
+            const data = fsSync.readFileSync(absolutePath);
+            imageParts.push({
+              inlineData: { data: data.toString('base64'), mimeType },
+            });
             return '';
           },
         );

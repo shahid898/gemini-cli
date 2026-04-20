@@ -5,7 +5,7 @@
  */
 
 import { vi, describe, it, expect, beforeEach, afterEach } from 'vitest';
-import { Task } from './task.js';
+import { Task } from './agent/task.js';
 import type { Config } from '@google/gemini-cli-core';
 import type { ExecutionEventBus } from '@a2a-js/sdk/server';
 import type { RequestContext } from '@a2a-js/sdk/server';
@@ -15,7 +15,7 @@ import *
 as os from 'node:os';
 
 // Mock the logger
-vi.mock('./logger.js', () => ({
+vi.mock('./utils/logger.js', () => ({
   logger: {
     info: vi.fn(),
     warn: vi.fn(),
@@ -50,7 +50,6 @@ describe('Task', () => {
       getApprovalMode: vi.fn(),
       getContentGeneratorConfig: vi.fn().mockReturnValue({ model: 'gemini-pro' }),
       getModel: vi.fn().mockReturnValue('gemini-pro'),
-      setFlashFallbackHandler: vi.fn(),
     };
 
     mockEventBus = {

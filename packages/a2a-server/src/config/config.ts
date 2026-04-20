@@ -24,7 +24,6 @@ import {
   getCodeAssistServer,
   ExperimentFlags,
   isHeadlessMode,
-  FatalAuthenticationError,
   PolicyDecision,
   PRIORITY_YOLO_ALLOW_ALL,
   type TelemetryTarget,
@@ -263,57 +262,33 @@ async function refreshAuthentication(
   config: Config,
   logPrefix: string,
 ): Promise<void> {
-  if (process.env['USE_CCPA']) {
+  const adcFilePath = process.env['GOOGLE_APPLICATION_CREDENTIALS'];
+  if (process.env['GOOGLE_GENAI_USE_VERTEXAI'] === 'true') {
+    logger.info('[Config] Using Vertex AI');
+    await config.refreshAuth(AuthType.USE_VERTEX_AI);
+  } else if (process.env['USE_CCPA']) {
     logger.info(`[${logPrefix}] Using CCPA Auth:`);
-
-    logger.info(`[${logPrefix}] Attempting COMPUTE_ADC first.`);
     try {
-      await config.refreshAuth(AuthType.COMPUTE_ADC);
-      logger.info(`[${logPrefix}] COMPUTE_ADC successful.`);
-    } catch (adcError) {
-      const adcMessage =
-        adcError instanceof Error ? adcError.message : String(adcError);
-      logger.info(
-        `[${logPrefix}] COMPUTE_ADC failed or not available: ${adcMessage}`,
-      );
-
-      const useComputeAdc =
-        process.env['GEMINI_CLI_USE_COMPUTE_ADC'] === 'true';
-      const isHeadless = isHeadlessMode();
-
-      if (isHeadless || useComputeAdc) {
-        const reason = isHeadless
-          ? 'headless mode'
-          : 'GEMINI_CLI_USE_COMPUTE_ADC=true';
-        throw new FatalAuthenticationError(
-          `COMPUTE_ADC failed: ${adcMessage}. (LOGIN_WITH_GOOGLE fallback skipped due to ${reason}. Run in an interactive terminal to use OAuth.)`,
-        );
+      if (adcFilePath) {
+        path.resolve(adcFilePath);
       }
-
-      logger.info(
-        `[${logPrefix}] COMPUTE_ADC failed, falling back to LOGIN_WITH_GOOGLE.`,
+    } catch (e) {
+      logger.error(
+        `[${logPrefix}] USE_CCPA env var is true but unable to resolve GOOGLE_APPLICATION_CREDENTIALS file path ${adcFilePath}. Error ${e}`,
       );
-      try {
-        await config.refreshAuth(AuthType.LOGIN_WITH_GOOGLE);
-      } catch (e) {
-        if (e instanceof FatalAuthenticationError) {
-          const originalMessage = e instanceof Error ? e.message : String(e);
-          throw new FatalAuthenticationError(
-            `${originalMessage}. The initial COMPUTE_ADC attempt also failed: ${adcMessage}`,
-          );
-        }
-        throw e;
-      }
     }
-
+    await config.refreshAuth(AuthType.LOGIN_WITH_GOOGLE);
     logger.info(
       `[${logPrefix}] GOOGLE_CLOUD_PROJECT: ${process.env['GOOGLE_CLOUD_PROJECT']}`,
     );
-  } else if (process.env['GEMINI_API_KEY']) {
+  } else if (
+    process.env['GEMINI_API_KEY'] ||
+    process.env['GOOGLE_API_KEY']
+  ) {
     logger.info(`[${logPrefix}] Using Gemini API Key`);
     await config.refreshAuth(AuthType.USE_GEMINI);
   } else {
-    const errorMessage = `[${logPrefix}] Unable to set GeneratorConfig. Please provide a GEMINI_API_KEY or set USE_CCPA.`;
+    const errorMessage = `[${logPrefix}] Unable to set GeneratorConfig. Please configure your authentication method. Supported methods are: Vertex AI (via GOOGLE_GENAI_USE_VERTEXAI), Google Account (via USE_CCPA), or an API Key (via GEMINI_API_KEY or GOOGLE_API_KEY).`;
     logger.error(errorMessage);
     throw new Error(errorMessage);
   }

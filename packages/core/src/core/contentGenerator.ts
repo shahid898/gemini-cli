@@ -130,7 +130,6 @@ export async function createContentGeneratorConfig(
     process.env['GEMINI_API_KEY'] ||
     (await loadApiKey()) ||
     undefined;
-  const googleApiKey = process.env['GOOGLE_API_KEY'] || undefined;
   const googleCloudProject =
     process.env['GOOGLE_CLOUD_PROJECT'] ||
     process.env['GOOGLE_CLOUD_PROJECT_ID'] ||
@@ -312,8 +311,6 @@ export async function createContentGenerator(
       if (baseUrl) {
         httpOptions.baseUrl = baseUrl;
       }
-      console.log("Vertex project:", config.project);
-      console.log("Vertex location:", config.location);
       const googleGenAI = new GoogleGenAI({
         apiKey: config.apiKey === '' ? undefined : config.apiKey,
         vertexai: config.vertexai ?? config.authType === AuthType.USE_VERTEX_AI,
