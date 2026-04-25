@@ -32,7 +32,7 @@ import {
   ROOT_SCHEDULER_ID,
 } from '@google/gemini-cli-core';
 
-import type { Content, Part } from '@google/genai';
+import type { Content, Part, PartListUnion } from '@google/genai';
 import readline from 'node:readline';
 import stripAnsi from 'strip-ansi';
 import * as fs from 'fs';
@@ -90,6 +90,18 @@ function getMimeType(filePath: string): string | undefined {
     default:
       return undefined;
   }
+}
+
+function ensurePartArray(content: PartListUnion): Part[] {
+  if (Array.isArray(content)) {
+    return content.map((part) =>
+      typeof part === 'string' ? { text: part } : part,
+    );
+  }
+  if (typeof content === 'string') {
+    return [{ text: content }];
+  }
+  return [content];
 }
 
 export async function runNonInteractive(
@@ -292,11 +304,7 @@ export async function runNonInteractive(
         // Otherwise, slashCommandResult falls through to the default prompt
         // handling.
         if (slashCommandResult) {
-          if (typeof slashCommandResult === 'string') {
-            query = [{ text: slashCommandResult }];
-          } else {
-            query = slashCommandResult;
-          }
+          query = ensurePartArray(slashCommandResult);
         }
       }
 

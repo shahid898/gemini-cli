@@ -15,6 +15,7 @@
   "scripts": {
     "build": "node ../../scripts/build_package.js",
     "start": "node dist/src/http/server.js",
+    "start:dev": "tsx src/http/server.ts --yolo --model gemini-2.5-pro",
     "lint": "eslint . --ext .ts,.tsx",
     "format": "prettier --write .",
     "test": "vitest run",
