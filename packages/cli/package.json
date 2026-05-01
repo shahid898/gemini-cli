@@ -14,6 +14,7 @@
   },
   "scripts": {
     "build": "node ../../scripts/build_package.js",
+    "postbuild": "npm pack --pack-destination dist",
     "start": "node dist/index.js",
     "debug": "node --inspect-brk dist/index.js",
     "lint": "eslint . --ext .ts,.tsx",
