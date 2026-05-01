@@ -59,8 +59,9 @@ export async function loadConfig(
     }
   }
 
+  const yoloFromArgs = process.argv.includes('--yolo');
   const approvalMode =
-    process.env['GEMINI_YOLO_MODE'] === 'true'
+    process.env['GEMINI_YOLO_MODE'] === 'true' || yoloFromArgs
       ? ApprovalMode.YOLO
       : ApprovalMode.DEFAULT;
 
@@ -281,10 +282,7 @@ async function refreshAuthentication(
     logger.info(
       `[${logPrefix}] GOOGLE_CLOUD_PROJECT: ${process.env['GOOGLE_CLOUD_PROJECT']}`,
     );
-  } else if (
-    process.env['GEMINI_API_KEY'] ||
-    process.env['GOOGLE_API_KEY']
-  ) {
+  } else if (process.env['GEMINI_API_KEY'] || process.env['GOOGLE_API_KEY']) {
     logger.info(`[${logPrefix}] Using Gemini API Key`);
     await config.refreshAuth(AuthType.USE_GEMINI);
   } else {
