@@ -68,6 +68,14 @@ describe('buildInlineImagePartsFromText', () => {
       buildInlineImagePartsFromText("'../../etc/secret.png'", ws),
     ).toThrow(/outside of the workspace/);
   });
+
+  it('throws when a sibling directory shares the workspace prefix', () => {
+    // ws is e.g. /tmp/img-parts-XXXX; target /tmp/img-parts-XXXX-sibling/x.png
+    const rel = path.join('..', `${path.basename(ws)}-sibling`, 'x.png');
+    expect(() => buildInlineImagePartsFromText(`'${rel}'`, ws)).toThrow(
+      /outside of the workspace/,
+    );
+  });
 });
 
 describe('inlineImageFromFilePart', () => {

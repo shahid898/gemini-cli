@@ -58,7 +58,10 @@ export function buildInlineImagePartsFromText(
       if (match.includes('://')) return match; // URL — keep as text
       const refPath = g1 ?? g2 ?? g3 ?? '';
       const absolutePath = path.resolve(workspacePath, refPath);
-      if (!absolutePath.startsWith(workspacePath)) {
+      const boundary = workspacePath.endsWith(path.sep)
+        ? workspacePath
+        : workspacePath + path.sep;
+      if (!absolutePath.startsWith(boundary)) {
         throw new Error(
           `File path is outside of the workspace: ${refPath}. Workspace is: ${workspacePath}`,
         );
