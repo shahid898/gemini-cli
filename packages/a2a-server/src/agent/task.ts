@@ -49,11 +49,11 @@ import type {
   Message,
   Part,
   Artifact,
+  FilePart,
 } from '@a2a-js/sdk';
 import { v4 as uuidv4 } from 'uuid';
 import { logger } from '../utils/logger.js';
 import * as fs from 'node:fs/promises';
-import * as fsSync from 'node:fs';
 import * as path from 'node:path';
 import {
   CoderAgentEvent,
@@ -67,6 +67,10 @@ import {
   type Citation,
 } from '../types.js';
 import type { PartUnion, Part as genAiPart } from '@google/genai';
+import {
+  buildInlineImagePartsFromText,
+  inlineImageFromFilePart,
+} from './image-parts.js';
 
 type UnionKeys<T> = T extends T ? keyof T : never;
 
@@ -884,15 +888,17 @@ export class Task {
       typeof part.data !== 'object' ||
       !('callId' in part.data) ||
       !('outcome' in part.data) ||
-      // eslint-disable-next-line no-restricted-syntax
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion
       typeof (part.data as { callId: unknown }).callId !== 'string' ||
-      // eslint-disable-next-line no-restricted-syntax
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion
       typeof (part.data as { outcome: unknown }).outcome !== 'string'
     ) {
       return false;
     }
 
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion
     const callId = (part.data as { callId: string }).callId;
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion
     const outcomeString = (part.data as { outcome: string }).outcome;
 
     this.toolsAlreadyConfirmed.add(callId);
@@ -1119,59 +1125,23 @@ export class Task {
       }
 
       if (part.kind === 'text') {
-        const imageParts: PartUnion[] = [];
-        const textWithoutImageRefs = part.text.replace(
-          /'((?!https?:\/\/)[^']+\.(?:png|jpg|jpeg|webp|heic|heif))'|"((?!https?:\/\/)[^"]+\.(?:png|jpg|jpeg|webp|heic|heif))"|((?!https?:\/\/)\S+\.(?:png|jpg|jpeg|webp|heic|heif))/g,
-          (match, g1, g2, g3) => {
-            const imagePath = g1 || g2 || g3;
-            // --- FIX: Detect and skip ALL URL schemes ---
-            // FIX: Detect URLs using the FULL match string
-            if (match.includes('://')) {
-              logger.info(`[Task] Skipping URL: ${match}`);
-              return match; // keep original text
-            }
-            // The regex now filters out URLs, so we can proceed directly.
-            const unquotedPath = imagePath;
-            const workspacePath = process.cwd();
-            const absolutePath = path.resolve(workspacePath, unquotedPath);
-
-            logger.info(
-              `[Task] Attempting to read image from path: ${unquotedPath}`,
-            );
-            logger.info(`[Task] Workspace path: ${workspacePath}`);
-            logger.info(`[Task] Resolved absolute image path: ${absolutePath}`);
-
-            if (!absolutePath.startsWith(workspacePath)) {
-              throw new Error(
-                `File path is outside of the workspace: ${unquotedPath}. Workspace is: ${workspacePath}`,
-              );
-            }
-
-            if (!fsSync.existsSync(absolutePath)) {
-              throw new Error(`Image file not found at: ${absolutePath}`);
-            }
-
-            const mimeType = this.getMimeType(unquotedPath);
-            if (!mimeType) {
-              throw new Error(`Unsupported image format: ${unquotedPath}`);
-            }
-
-            const data = fsSync.readFileSync(absolutePath);
-            imageParts.push({
-              inlineData: { data: data.toString('base64'), mimeType },
-            });
-            return '';
-          },
-        );
-
+        const { textWithoutImageRefs, imageParts } =
+          buildInlineImagePartsFromText(part.text, process.cwd());
         if (textWithoutImageRefs.trim()) {
           llmParts.push({ text: textWithoutImageRefs });
           hasContentForLlm = true;
         }
-
         if (imageParts.length > 0) {
-          llmParts.push(...imageParts);
+          llmParts.push(...(imageParts as PartUnion[]));
           hasContentForLlm = true;
+        }
+      } else if (part.kind === 'file') {
+        const filePart: FilePart = part;
+        const inline = inlineImageFromFilePart(filePart, process.cwd());
+        if (inline) {
+          llmParts.push(inline as PartUnion);
+          hasContentForLlm = true;
+          logger.info('[Task] Inlined uploaded image file part.');
         }
       }
     }
@@ -1220,24 +1190,6 @@ export class Task {
       yield* (async function* () {})(); // Yield nothing
     }
   }
-  private getMimeType(filePath: string): string | undefined {
-      const extension = path.extname(filePath).toLowerCase();
-      switch (extension) {
-        case '.png':
-          return 'image/png';
-        case '.jpg':
-        case '.jpeg':
-          return 'image/jpeg';
-        case '.webp':
-          return 'image/webp';
-        case '.heic':
-          return 'image/heic';
-        case '.heif':
-          return 'image/heif';
-        default:
-          return undefined;
-      }
-    }
   _sendTextContent(content: string, traceId?: string): void {
     if (content === '') {
       return;
